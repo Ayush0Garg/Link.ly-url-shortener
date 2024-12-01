@@ -1,4 +1,4 @@
-package com.Linkly.Models;
+package com.example.Linkly.Models;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -24,5 +24,7 @@ public class UrlModel {
 
     @Column (unique = true)
     private String shortUrl;
+
+    private LocalDateTime expirationDate;
 
 }
