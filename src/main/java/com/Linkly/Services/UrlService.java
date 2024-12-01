@@ -1,15 +1,17 @@
-package com.Linkly.Services;
+package com.example.Linkly.Services;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 
-import com.Linkly.Models.CustomUrlModel;
-import com.Linkly.Models.UrlModel;
-import com.Linkly.Repository.UrlRepo;
+import com.example.Linkly.Models.CustomUrlModel;
+import com.example.Linkly.Models.UrlModel;
+import com.example.Linkly.Repository.UrlRepo;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -21,6 +23,8 @@ public class UrlService {
 
     @Autowired
     private UrlRepo urlRepo;
+
+    int expirationTime = 28;
 
     public String urlShortener(String originalUrl) {
 
@@ -40,11 +44,13 @@ public class UrlService {
         urlModel1.setShortUrl(shortUrl);
         urlModel1.setOriginalUrl(originalUrl);
         urlModel1.setCreationTime(LocalDateTime.now());
+        urlModel1.setExpirationDate(urlModel1.getCreationTime().plusDays(expirationTime));
         urlRepo.save(urlModel1);
 
         System.out.println("url: " + urlModel1.getOriginalUrl());
         System.out.println("new url: " + urlModel1.getShortUrl());
         System.out.println("time: " + urlModel1.getCreationTime());
+        System.out.println("expire: " + urlModel1.getExpirationDate());
 
         return shortUrl;
     }
@@ -85,9 +91,12 @@ public class UrlService {
         }
     }
 
-    public String findUrl(String shortUrl) {
+    public String findUrlredirect(String shortUrl) {
         Optional<UrlModel> urlModel = urlRepo.findByshortUrl(shortUrl);
         if (urlModel.isPresent()){
+            int  count = urlModel.get().getCountClicked();
+            urlModel.get().setCountClicked(++count);
+            urlRepo.save(urlModel.get());
             return urlModel.get().getOriginalUrl();
         }
         System.out.println("URL not valid");
@@ -112,9 +121,23 @@ public class UrlService {
             urlModel.setShortUrl(customUrlModel.getCustomUrl());
             urlModel.setOriginalUrl(customUrlModel.getOriginalUrl());
             urlModel.setCreationTime(LocalDateTime.now());
+            urlModel.setExpirationDate(urlModel.getCreationTime().plusDays(expirationTime));
             urlRepo.save(urlModel);
             return urlModel.getShortUrl();
         }
 
     }
+
+    public List<UrlModel> getAllLinks() {
+        return urlRepo.getAllLinksByCountClicked();
+    }
+
+    @Scheduled(cron = "0 0 0 * * *")
+    public void removeExpired(){
+        System.out.print("Running scheduled task to remove expired links...");
+        urlRepo.removeExpiredLinks();
+        System.out.println("Done");
+    }
+
+
 }
